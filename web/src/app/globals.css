@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #05070a;
+  --fg: #d8ffe6;
+  --phosphor: #00ff88;
+  --phosphor-dim: #00b35c;
+  --phosphor-faint: #003a1e;
+  --amber: #ffcc33;
+  --muted: #60766b;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  min-height: 100dvh;
+}
+
+body::before {
+  /* scanline overlay */
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 255, 136, 0.025) 0 1px,
+    transparent 1px 3px
+  );
+  mix-blend-mode: screen;
+  z-index: 50;
+}
+
+.term-glow {
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.45), 0 0 2px rgba(0, 255, 136, 0.6);
+}
+
+.term-cursor::after {
+  content: "▊";
+  margin-left: 2px;
+  animation: blink 1s steps(1) infinite;
+  color: var(--phosphor);
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+/* ASCII-style border */
+.ascii-box {
+  border: 1px solid var(--phosphor-faint);
+  position: relative;
+}
+.ascii-box::before, .ascii-box::after {
+  color: var(--phosphor-dim);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  position: absolute;
+  left: 6px;
+  white-space: nowrap;
+}
+.ascii-box::before { top: -7px; background: var(--bg); padding: 0 6px; content: attr(data-label); }
+
+a { color: var(--phosphor-dim); }
+a:hover { color: var(--phosphor); text-shadow: 0 0 6px rgba(0,255,136,0.4); }
