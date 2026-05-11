@@ -20,3 +20,4 @@ contracts/broadcast/
 .vscode/
 .idea/
 contracts/foundry.lock
+.gitmodules

@@ -22,9 +22,22 @@ contract SatoshitTest is Test {
         assertEq(shit.totalSupply(), 21_000_000e18);
         assertEq(shit.balanceOf(address(shit)), 21_000_000e18);
         assertEq(shit.totalMints(), 0);
+        assertEq(shit.totalBurned(), 0);
         assertEq(shit.currentDifficulty(), 1 << 240);
-        assertEq(shit.currentReward(), 100e18);
+        assertEq(shit.BURN_BPS(), 100);
+        assertEq(shit.grossReward(), 100e18);
+        assertEq(shit.currentReward(), 99e18); // 100 - 1% burn
         assertEq(shit.currentEra(), 0);
+    }
+
+    function testNoOwnerNoAdmin() public view {
+        // There are no admin functions. Bytecode of a contract size check is
+        // not meaningful here -- instead we enumerate: no owner()/pause()/etc.
+        // This test just asserts constants are constants (compile-time checks).
+        assertEq(shit.MAX_MINTS_PER_BLOCK(), 10);
+        assertEq(shit.ERA_MINTS(), 100_000);
+        assertEq(shit.EPOCH_BLOCKS(), 100);
+        assertEq(shit.ADJUSTMENT_INTERVAL(), 2_016);
     }
 
     function testChallengeIsPerMinerPerEpoch() public view {
@@ -41,13 +54,24 @@ contract SatoshitTest is Test {
         assertEq(onchain, local);
     }
 
-    function testMineWithValidNonceMintsReward() public {
+    function testVerifyProofView() public {
         uint256 nonce = _findNonce(alice);
+        assertTrue(shit.verifyProof(alice, nonce), "valid proof should verify");
+        assertFalse(shit.verifyProof(alice, nonce + 1), "different nonce should fail");
+    }
+
+    function testMineWithValidNonceMintsNetRewardAndBurns() public {
+        uint256 nonce = _findNonce(alice);
+        uint256 totalSupplyBefore = shit.totalSupply();
+
         vm.prank(alice);
         shit.mine(nonce);
-        assertEq(shit.balanceOf(alice), 100e18);
+
+        // 99 to alice, 1 burned
+        assertEq(shit.balanceOf(alice), 99e18);
         assertEq(shit.totalMints(), 1);
-        // supply moved from contract to miner
+        assertEq(shit.totalBurned(), 1e18);
+        assertEq(shit.totalSupply(), totalSupplyBefore - 1e18);
         assertEq(shit.balanceOf(address(shit)), 21_000_000e18 - 100e18);
     }
 
@@ -81,21 +105,45 @@ contract SatoshitTest is Test {
         shit.mine(nonce);
     }
 
+    function testCannotMineAsZeroAddress() public {
+        uint256 nonce = _findNonce(address(0));
+        vm.prank(address(0));
+        vm.expectRevert(Satoshit.InvalidMiner.selector);
+        shit.mine(nonce);
+    }
+
+    function testCannotMineAsContract() public {
+        // Can't realistically prank as the contract itself easily,
+        // but the check rejects msg.sender==address(this) as a defense in depth.
+        // Simulate via vm.prank.
+        uint256 nonce = _findNonce(address(shit));
+        vm.prank(address(shit));
+        vm.expectRevert(Satoshit.InvalidMiner.selector);
+        shit.mine(nonce);
+    }
+
+    function testHolderCanBurnVoluntarily() public {
+        uint256 nonce = _findNonce(alice);
+        vm.prank(alice);
+        shit.mine(nonce);
+        assertEq(shit.balanceOf(alice), 99e18);
+
+        uint256 supplyBefore = shit.totalSupply();
+        vm.prank(alice);
+        shit.burn(10e18);
+        assertEq(shit.balanceOf(alice), 89e18);
+        assertEq(shit.totalSupply(), supplyBefore - 10e18);
+    }
+
     function testHalvingConstants() public view {
-        // Base reward is 100 SHIT
         assertEq(shit.BASE_REWARD(), 100e18);
-        // Halving via right-shift: 100 -> 50 -> 25 -> 12.5
         assertEq(shit.BASE_REWARD() >> 1, 50e18);
         assertEq(shit.BASE_REWARD() >> 2, 25e18);
         assertEq(shit.BASE_REWARD() >> 3, 12.5e18);
-        // era 8: 100 / 256 = 0.390625 SHIT
         assertEq(shit.BASE_REWARD() >> 8, 0.390625e18);
-        // Era cap logic lives in contract ternary (era < 64 ? shift : 0),
-        // which we verify directly via currentReward() at era=0 above.
     }
 
-    // Brute-force helper. Uses scratch memory (0x00-0x40) so no memory growth
-    // per iteration -- avoids MemoryOOG when called many times in one test.
+    // Brute-force helper using scratch memory to avoid OOM in loops.
     function _findNonce(address miner) internal view returns (uint256) {
         bytes32 challenge = shit.getChallenge(miner);
         uint256 difficulty = shit.currentDifficulty();

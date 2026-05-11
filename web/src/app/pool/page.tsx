@@ -3,13 +3,13 @@
 import { useEffect, useState } from "react";
 import { useAccount, usePublicClient } from "wagmi";
 import { CONTRACT_ADDRESS, EXPLORER_BASE } from "@/lib/config";
-import { SATOSHIT_ABI } from "@/lib/abi";
 import { formatUnits, parseAbiItem, type Log } from "viem";
 
 type MineEvent = {
   miner: `0x${string}`;
   nonce: bigint;
   reward: bigint;
+  burned: bigint;
   era: bigint;
   epoch: bigint;
   block: bigint;
@@ -35,7 +35,7 @@ export default function PoolPage() {
         const logs = await client.getLogs({
           address: CONTRACT_ADDRESS,
           event: parseAbiItem(
-            "event Mined(address indexed miner, uint256 nonce, uint256 reward, uint256 era, uint256 epoch)",
+            "event Mined(address indexed miner, uint256 nonce, uint256 rewardPaid, uint256 burned, uint256 era, uint256 epoch)",
           ),
           fromBlock: from,
           toBlock: "latest",
@@ -46,7 +46,8 @@ export default function PoolPage() {
           return {
             miner: a.miner,
             nonce: a.nonce,
-            reward: a.reward,
+            reward: a.rewardPaid,
+            burned: a.burned,
             era: a.era,
             epoch: a.epoch,
             block: l.blockNumber ?? 0n,
@@ -70,15 +71,34 @@ export default function PoolPage() {
   }, [client]);
 
   const mine = address?.toLowerCase();
+  const totalReward = events.reduce((a, e) => a + e.reward, 0n);
+  const totalBurned = events.reduce((a, e) => a + e.burned, 0n);
 
   return (
     <div className="space-y-6">
       <header className="space-y-2">
         <h1 className="text-2xl term-glow uppercase tracking-widest">┌ pool</h1>
         <p className="text-sm text-muted">
-          Recent Mined events across all miners (last ~5000 blocks). Self-rows are highlighted.
+          Recent Mined events across all miners (last ~5000 blocks). Self-rows highlighted.
         </p>
       </header>
+
+      <div className="ascii-box p-4 text-xs" data-label="[ recent window ]">
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <div className="text-muted">events</div>
+            <div className="text-phosphor term-glow text-lg">{events.length}</div>
+          </div>
+          <div>
+            <div className="text-muted">total paid</div>
+            <div className="text-phosphor term-glow text-lg">{formatUnits(totalReward, 18)} SHIT</div>
+          </div>
+          <div>
+            <div className="text-muted">total burned 🔥</div>
+            <div className="text-amber term-glow text-lg">{formatUnits(totalBurned, 18)} SHIT</div>
+          </div>
+        </div>
+      </div>
 
       <div className="ascii-box p-4" data-label="[ recent mines ]">
         {loading && events.length === 0 && <p className="text-muted text-sm">loading…</p>}
@@ -97,8 +117,9 @@ export default function PoolPage() {
                 }`}
               >
                 <span className="w-24 shrink-0">blk {e.block.toString()}</span>
-                <span className="w-20 shrink-0">era {e.era.toString()}</span>
-                <span className="w-28 shrink-0">{formatUnits(e.reward, 18)} SHIT</span>
+                <span className="w-16 shrink-0">era {e.era.toString()}</span>
+                <span className="w-32 shrink-0">+{formatUnits(e.reward, 18)}</span>
+                <span className="w-24 shrink-0 text-amber/80">🔥{formatUnits(e.burned, 18)}</span>
                 <a
                   href={`${EXPLORER_BASE}/address/${e.miner}`}
                   target="_blank"

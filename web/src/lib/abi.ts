@@ -1,5 +1,5 @@
 export const SATOSHIT_ABI = [
-  // reads
+  // ---- reads (constants / view) ----
   { type: "function", name: "name", stateMutability: "view", inputs: [], outputs: [{ type: "string" }] },
   { type: "function", name: "symbol", stateMutability: "view", inputs: [], outputs: [{ type: "string" }] },
   { type: "function", name: "decimals", stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
@@ -11,41 +11,73 @@ export const SATOSHIT_ABI = [
   { type: "function", name: "ERA_MINTS", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "EPOCH_BLOCKS", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "ADJUSTMENT_INTERVAL", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "TARGET_BLOCKS_PER_MINT", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "MAX_MINTS_PER_BLOCK", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "MAX_ERA", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "BURN_BPS", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "GENESIS_BLOCK", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
 
   { type: "function", name: "totalMints", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "totalBurned", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "currentDifficulty", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "lastAdjustmentMint", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "lastAdjustmentBlock", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+
   { type: "function", name: "currentEpoch", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "currentEra", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "grossReward", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "currentReward", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "minedSupply", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "remainingSupply", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
-  { type: "function", name: "mintsUntilRetarget", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "blocksUntilNextEpoch", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "mintsUntilRetarget", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+
   { type: "function", name: "getChallenge", stateMutability: "view", inputs: [{ name: "miner", type: "address" }], outputs: [{ type: "bytes32" }] },
+  { type: "function", name: "verifyProof", stateMutability: "view", inputs: [{ name: "miner", type: "address" }, { name: "nonce", type: "uint256" }], outputs: [{ type: "bool" }] },
 
-  // writes
+  // ---- writes ----
   { type: "function", name: "mine", stateMutability: "nonpayable", inputs: [{ name: "nonce", type: "uint256" }], outputs: [] },
+  { type: "function", name: "transfer", stateMutability: "nonpayable", inputs: [{ name: "to", type: "address" }, { name: "amount", type: "uint256" }], outputs: [{ type: "bool" }] },
+  { type: "function", name: "burn", stateMutability: "nonpayable", inputs: [{ name: "amount", type: "uint256" }], outputs: [] },
+  { type: "function", name: "burnFrom", stateMutability: "nonpayable", inputs: [{ name: "account", type: "address" }, { name: "amount", type: "uint256" }], outputs: [] },
 
-  // events
-  { type: "event", name: "Mined", inputs: [
+  // ---- events ----
+  {
+    type: "event",
+    name: "Mined",
+    inputs: [
       { indexed: true, name: "miner", type: "address" },
       { indexed: false, name: "nonce", type: "uint256" },
-      { indexed: false, name: "reward", type: "uint256" },
+      { indexed: false, name: "rewardPaid", type: "uint256" },
+      { indexed: false, name: "burned", type: "uint256" },
       { indexed: false, name: "era", type: "uint256" },
       { indexed: false, name: "epoch", type: "uint256" },
-    ]
+    ],
   },
-  { type: "event", name: "DifficultyAdjusted", inputs: [
+  {
+    type: "event",
+    name: "DifficultyAdjusted",
+    inputs: [
       { indexed: false, name: "fromDiff", type: "uint256" },
       { indexed: false, name: "toDiff", type: "uint256" },
       { indexed: false, name: "blocksTaken", type: "uint256" },
-    ]
+    ],
   },
-  { type: "event", name: "Halving", inputs: [
-      { indexed: false, name: "era", type: "uint256" },
+  {
+    type: "event",
+    name: "Halving",
+    inputs: [
+      { indexed: true, name: "era", type: "uint256" },
       { indexed: false, name: "newReward", type: "uint256" },
-    ]
+    ],
+  },
+  {
+    type: "event",
+    name: "Transfer",
+    inputs: [
+      { indexed: true, name: "from", type: "address" },
+      { indexed: true, name: "to", type: "address" },
+      { indexed: false, name: "value", type: "uint256" },
+    ],
   },
 ] as const;
